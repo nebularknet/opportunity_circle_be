@@ -48,9 +48,28 @@ const updatePreferences = async (userId, preferencesData) => {
   return preferences;
 };
 
-const completeOnboarding = async (userId, { profileData, preferencesData }) => {
-  const user = await updateProfile(userId, { ...profileData, onboardingCompleted: true });
-  const preferences = await updatePreferences(userId, preferencesData);
+const completeOnboarding = async (userId, data = {}) => {
+  const user = await User.findByIdAndUpdate(
+    userId,
+    {
+      $set: { onboardingCompleted: true, ...data.profileData },
+    },
+    {
+      new: true,
+      runValidators: true,
+    }
+  ).select('-password -refreshToken');
+
+  if (!user) {
+    throw new ApiError(404, 'User not found');
+  }
+
+  let preferences = null;
+  if (data.preferencesData) {
+    preferences = await updatePreferences(userId, data.preferencesData);
+  } else {
+    preferences = await UserPreference.findOne({ userId });
+  }
 
   return { user, preferences };
 };

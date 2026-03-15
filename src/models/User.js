@@ -1,6 +1,73 @@
 import mongoose, { Schema } from 'mongoose';
 import bcrypt from 'bcryptjs';
 
+/**
+ * @swagger
+ * components:
+ *   schemas:
+ *     User:
+ *       type: object
+ *       required:
+ *         - fullName
+ *         - email
+ *         - role
+ *       properties:
+ *         id:
+ *           type: string
+ *           description: The auto-generated id of the user
+ *         fullName:
+ *           type: string
+ *           description: Full name of the user
+ *         email:
+ *           type: string
+ *           format: email
+ *           description: Email address of the user (must be unique)
+ *         username:
+ *           type: string
+ *           description: Unique username (optional)
+ *         role:
+ *           type: string
+ *           enum: [SEEKER, PUBLISHER, ADMIN]
+ *           default: SEEKER
+ *         profilePhotoUrl:
+ *           type: string
+ *         bgCoverPhotoUrl:
+ *           type: string
+ *         phoneNumber:
+ *           type: string
+ *         bio:
+ *           type: string
+ *         country:
+ *           type: string
+ *         location:
+ *           type: string
+ *         education:
+ *           type: string
+ *         fieldOfStudy:
+ *           type: string
+ *         degreeLevel:
+ *           type: string
+ *           enum: [UNDERGRADUATE, GRADUATE, PHD, OTHER, null]
+ *         isProfileVisible:
+ *           type: boolean
+ *         isEmailVerified:
+ *           type: boolean
+ *         onboardingCompleted:
+ *           type: boolean
+ *         isOAuthUser:
+ *           type: boolean
+ *         createdAt:
+ *           type: string
+ *           format: date-time
+ *         updatedAt:
+ *           type: string
+ *           format: date-time
+ *       example:
+ *         fullName: John Doe
+ *         email: john@example.com
+ *         role: SEEKER
+ *         isEmailVerified: false
+ */
 const userSchema = new Schema(
   {
     fullName: {

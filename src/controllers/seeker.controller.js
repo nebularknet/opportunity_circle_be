@@ -42,8 +42,20 @@ const getMySavedItems = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, items, 'Saved items fetched successfully'));
 });
 
+import { uploadToCloudinary } from '../config/cloudinary.js';
+import fs from 'fs';
+
 const updateProfile = asyncHandler(async (req, res) => {
-  const user = await seekerService.updateProfile(req.user._id, req.body);
+  let profileData = { ...req.body };
+
+  if (req.file) {
+    const result = await uploadToCloudinary(req.file.path, 'seeker-profiles');
+    profileData.profilePhotoUrl = result.secure_url;
+    // Remove local temp file
+    fs.unlinkSync(req.file.path);
+  }
+
+  const user = await seekerService.updateProfile(req.user._id, profileData);
 
   return res
     .status(200)

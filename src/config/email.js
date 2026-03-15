@@ -7,24 +7,34 @@ import logger from '../utils/logger.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
+const transporter = process.env.NODE_ENV === 'test' 
+  ? nodemailer.createTransport({
+      streamTransport: true,
+      newline: 'unix',
+      buffer: true
+    })
+  : nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: process.env.SMTP_SECURE === 'true',
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
 
 // Verify connection configuration
-transporter.verify((error, success) => {
-  if (error) {
-    logger.error('SMTP Connection Error:', error);
-  } else {
-    logger.info('Server is ready to take our messages');
-  }
-});
+if (process.env.NODE_ENV !== 'test') {
+  transporter.verify((error, success) => {
+    if (error) {
+      logger.error('SMTP Connection Error:', error);
+    } else {
+      logger.info('Server is ready to take our messages');
+    }
+  });
+} else {
+  logger.info('SMTP Verification skipped in test environment');
+}
 
 const handlebarOptions = {
   viewEngine: {

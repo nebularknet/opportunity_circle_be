@@ -3,8 +3,10 @@ import request from 'supertest';
 import { app } from '../../src/app.js';
 import { User } from '../../src/models/User.js';
 import { UserPreference } from '../../src/models/UserPreference.js';
+import { PasswordResetToken } from '../../src/models/PasswordResetToken.js';
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
+import crypto from 'crypto';
 
 dotenv.config({ path: './.env.test' });
 
@@ -20,6 +22,7 @@ describe('Authentication Integration Tests', function () {
   beforeEach(async () => {
     await User.deleteMany({});
     await UserPreference.deleteMany({});
+    await PasswordResetToken.deleteMany({});
   });
 
   after(async () => {
@@ -146,5 +149,99 @@ describe('Authentication Integration Tests', function () {
     expect(res.status).to.equal(200);
     expect(res.body.data).to.have.property('accessToken');
     expect(res.body.data).to.have.property('refreshToken');
+  });
+
+  it('should fail login for non-existent user', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/login')
+      .send({
+        email: 'nonexistent@test.com',
+        password: 'password123',
+      });
+
+    expect(res.status).to.equal(404);
+  });
+
+  it('should fail refresh token if token is invalid', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/refresh-token')
+      .send({ refreshToken: 'invalidtoken' });
+
+    expect(res.status).to.equal(401);
+  });
+
+  it('should fail refresh token if token is missing', async () => {
+    const res = await request(app)
+      .post('/api/v1/auth/refresh-token')
+      .send({});
+
+    expect(res.status).to.equal(401);
+  });
+
+  it('should handle OAuth login via service (internal)', async () => {
+    const { processOAuthLogin } = await import('../../src/services/auth.service.js');
+    
+    const email = 'oauth@test.com';
+    // Create user first
+    await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        email,
+        password: 'password123',
+        role: 'SEEKER',
+        fullName: 'OAuth User',
+      });
+
+    // Existing user OAuth (login/link)
+    const loginResult = await processOAuthLogin({
+      provider: 'google',
+      providerUserId: 'google123',
+      email,
+    });
+    expect(loginResult.user.email).to.equal(email);
+    expect(loginResult).to.have.property('accessToken');
+  });
+
+  it('should handle forgot and reset password flow', async () => {
+    const email = 'reset@test.com';
+    const registerRes = await request(app)
+      .post('/api/v1/auth/register')
+      .send({
+        email,
+        password: 'password123',
+        role: 'SEEKER',
+        fullName: 'Reset User',
+      });
+    const userId = registerRes.body.data._id;
+
+    // Manually create a reset token in DB for testing
+    const token = 'mytesecrettoken123';
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    
+    await PasswordResetToken.create({
+      userId,
+      token: hashedToken,
+      expiresAt: new Date(Date.now() + 3600000), // 1 hour
+    });
+
+    // Reset password using the plain token
+    const resetRes = await request(app)
+      .post('/api/v1/auth/reset-password')
+      .send({
+        token,
+        password: 'newpassword123',
+      });
+
+    expect(resetRes.status).to.equal(200);
+
+    // Verify login with new password
+    const loginRes = await request(app)
+      .post('/api/v1/auth/login')
+      .send({
+        email,
+        password: 'newpassword123',
+      });
+    
+    expect(loginRes.status).to.equal(200);
   });
 });

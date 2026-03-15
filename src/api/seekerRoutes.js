@@ -58,10 +58,12 @@ const preferencesUpdateSchema = z.object({
   }),
 });
 
+import { upload } from '../middleware/multer.js';
+
 router.use(verifyJWT);
 router.use(authorizeRoles('SEEKER'));
 
-router.route('/profile').get(getMyProfile).patch(validate(profileUpdateSchema), updateProfile);
+router.route('/profile').get(getMyProfile).patch(upload.single('profilePhoto'), validate(profileUpdateSchema), updateProfile);
 router.route('/preferences').patch(validate(preferencesUpdateSchema), updatePreferences);
 router.route('/onboarding').post(completeOnboarding);
 

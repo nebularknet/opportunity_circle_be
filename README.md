@@ -33,6 +33,9 @@ docker-compose up --build
 
 ## API Features
 - **Multi-role Auth**: Seeker, Publisher, Admin.
+- **Seeker Onboarding**: 3-step personalized onboarding flow with preference synchronization.
+- **Seeker Profiles**: Professional profile management with Cloudinary image upload integration.
+- **Opportunity Feed**: Filtered and paginated opportunity delivery for seekers.
 - **I18n**: Support for multi-language content.
 - **Robust Validation**: Zod-powered schema validation.
 - **Traceability**: x-correlation-id in all requests.

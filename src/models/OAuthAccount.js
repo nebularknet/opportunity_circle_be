@@ -10,7 +10,7 @@ const oauthAccountSchema = new Schema(
     },
     provider: {
       type: String,
-      enum: ['GOOGLE', 'LINKEDIN', 'GITHUB'],
+      enum: ['GOOGLE', 'GITHUB'],
       required: true,
     },
     providerUserId: {

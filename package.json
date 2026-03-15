@@ -7,9 +7,7 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "test": "c8 mocha tests/**/*.test.js --exit",
-    "lint": "eslint src tests",
-    "format": "prettier --write src tests"
+    "test": "mocha tests/**/*.test.js --exit"
   },
   "keywords": [
     "saas",
@@ -25,12 +23,11 @@
     "cloudinary": "^1.41.3",
     "cls-hooked": "^4.2.2",
     "cookie-parser": "^1.4.6",
-    "cors": "^2.8.5",
+    "cors": "^2.8.6",
     "dotenv": "^16.4.5",
     "express": "^4.19.2",
     "express-mongo-sanitize": "^2.2.0",
     "express-rate-limit": "^8.3.1",
-    "handlebars": "^4.7.8",
     "helmet": "^7.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.2.3",
@@ -42,7 +39,6 @@
     "passport": "^0.7.0",
     "passport-github2": "^0.1.12",
     "passport-google-oauth20": "^2.0.0",
-    "passport-linkedin-oauth2": "^2.0.0",
     "socket.io": "^4.8.3",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1",
@@ -52,8 +48,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "autocannon": "^8.0.0",
-    "c8": "^11.0.0",
     "chai": "^5.1.0",
     "mocha": "^10.4.0",
     "nodemon": "^3.1.0",

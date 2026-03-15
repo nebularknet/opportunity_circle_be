@@ -43,7 +43,7 @@ io.on('connection', (socket) => {
 connectDB()
   .then(() => {
     server.listen(PORT, () => {
-      logger.info(`Server is running at port : ${PORT}`);
+      logger.info(`Server is running at port http://localhost:${PORT}`);
     });
   })
   .catch((err) => {

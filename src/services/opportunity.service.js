@@ -75,11 +75,35 @@ const getAllOpportunities = async (filters = {}, options = {}) => {
     query.$text = { $search: search };
   }
 
-  const opportunities = await Opportunity.find(query)
-    .sort(search ? { score: { $meta: 'textScore' } } : { createdAt: -1 })
-    .skip((page - 1) * limit)
-    .limit(limit);
+  // Use aggregation to join with PublisherProfile for isVerified status
+  const pipeline = [
+    { $match: query },
+    {
+      $lookup: {
+        from: 'publisherprofiles',
+        localField: 'publisherId',
+        foreignField: 'userId',
+        as: 'publisherProfile',
+      },
+    },
+    {
+      $addFields: {
+        isVerified: {
+          $cond: {
+            if: { $gt: [{ $size: '$publisherProfile' }, 0] },
+            then: { $arrayElemAt: ['$publisherProfile.verified', 0] },
+            else: false,
+          },
+        },
+      },
+    },
+    { $project: { publisherProfile: 0 } },
+    { $sort: search ? { score: { $meta: 'textScore' } } : { createdAt: -1 } },
+    { $skip: (page - 1) * limit },
+    { $limit: limit },
+  ];
 
+  const opportunities = await Opportunity.aggregate(pipeline);
   const total = await Opportunity.countDocuments(query);
 
   return { opportunities, total, page, totalPages: Math.ceil(total / limit) };

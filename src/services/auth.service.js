@@ -4,6 +4,7 @@ import { OAuthAccount } from '../models/OAuthAccount.js';
 import { UserPreference } from '../models/UserPreference.js';
 import { PublisherProfile } from '../models/PublisherProfile.js';
 import { PasswordResetToken } from '../models/PasswordResetToken.js';
+import { EmailVerificationToken } from '../models/EmailVerificationToken.js';
 import { ApiError } from '../utils/apiError.js';
 import { generateAccessToken, generateRefreshToken } from '../utils/token.js';
 import { sendEmail } from '../config/email.js';
@@ -26,6 +27,35 @@ const registerUser = async ({ email, password, role, fullName }) => {
   // Initialize preferences for seekers
   if (role === 'SEEKER') {
     await UserPreference.create({ userId: user._id });
+  }
+
+  // Generate Email Verification Token
+  const verificationToken = crypto.randomBytes(32).toString('hex');
+  const hashedToken = crypto.createHash('sha256').update(verificationToken).digest('hex');
+
+  await EmailVerificationToken.create({
+    userId: user._id,
+    token: hashedToken,
+    expiresAt: new Date(Date.now() + 24 * 3600000), // 24 hours
+  });
+
+  const verificationUrl = `${process.env.FRONTEND_URL}/verify-email?token=${verificationToken}`;
+
+  // Send verification email
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: 'Verify your Opportunity Circle account',
+      template: 'email-verification',
+      context: {
+        fullName: user.fullName,
+        verificationUrl,
+      },
+    });
+  } catch (error) {
+    // We don't want to fail registration if email fails, but we should log it
+    // In a real app, you might want to provide a "resend" option
+    console.error('Failed to send verification email during registration:', error);
   }
 
   const createdUser = await User.findById(user._id).select('-password -refreshToken');
@@ -106,7 +136,8 @@ const refreshAccessToken = async (incomingRefreshToken) => {
 };
 
 const processOAuthLogin = async ({ provider, providerUserId, email, fullName, profilePhotoUrl }) => {
-  let oauthAccount = await OAuthAccount.findOne({ provider, providerUserId });
+  const normalizedProvider = provider.toUpperCase();
+  let oauthAccount = await OAuthAccount.findOne({ provider: normalizedProvider, providerUserId });
   let user;
 
   if (oauthAccount) {
@@ -132,9 +163,13 @@ const processOAuthLogin = async ({ provider, providerUserId, email, fullName, pr
     // Link OAuth account
     await OAuthAccount.create({
       userId: user._id,
-      provider,
+      provider: normalizedProvider,
       providerUserId,
     });
+  }
+
+  if (!user) {
+    throw new ApiError(500, 'User creation or retrieval failed during OAuth');
   }
 
   const accessToken = generateAccessToken(user);
@@ -199,6 +234,29 @@ const resetPassword = async (token, newPassword) => {
   return true;
 };
 
+const verifyEmail = async (token) => {
+  const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+
+  const verificationToken = await EmailVerificationToken.findOne({
+    token: hashedToken,
+    used: false,
+    expiresAt: { $gt: new Date() },
+  });
+
+  if (!verificationToken) throw new ApiError(400, 'Invalid or expired verification token');
+
+  const user = await User.findById(verificationToken.userId);
+  if (!user) throw new ApiError(404, 'User not found');
+
+  user.isEmailVerified = true;
+  await user.save({ validateBeforeSave: false });
+
+  verificationToken.used = true;
+  await verificationToken.save();
+
+  return true;
+};
+
 export {
   registerUser,
   loginUser,
@@ -207,4 +265,5 @@ export {
   processOAuthLogin,
   forgotPassword,
   resetPassword,
+  verifyEmail,
 };

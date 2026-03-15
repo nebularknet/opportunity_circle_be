@@ -90,6 +90,20 @@ const resetPassword = asyncHandler(async (req, res) => {
     .json(new ApiResponse(200, {}, 'Password reset successfully'));
 });
 
+const verifyEmail = asyncHandler(async (req, res) => {
+  const { token } = req.query;
+
+  if (!token) {
+    throw new ApiError(400, 'Verification token is required');
+  }
+
+  await authService.verifyEmail(token);
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, {}, 'Email verified successfully'));
+});
+
 const oauthSuccess = asyncHandler(async (req, res) => {
   const { user, accessToken, refreshToken } = req.user;
 
@@ -107,5 +121,6 @@ export {
   refreshAccessToken,
   forgotPassword,
   resetPassword,
+  verifyEmail,
   oauthSuccess,
 };

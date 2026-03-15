@@ -71,9 +71,87 @@ describe('Opportunity Integration Tests', function () {
     expect(res.body.data.title.en).to.equal('Test Internship');
   });
 
-  it('should fetch all active opportunities', async () => {
-    const res = await request(app).get('/api/v1/opportunities');
+  it('should fetch all active opportunities with filters', async () => {
+    // Create an active opportunity directly in DB
+    await Opportunity.create({
+      publisherId,
+      type: 'SCHOLARSHIP',
+      title: { en: 'Scholarship Alpha' },
+      organizationName: 'Alpha Academy',
+      description: { en: 'Scholarship description' },
+      location: 'Berlin',
+      status: 'ACTIVE',
+      deadline: new Date(Date.now() + 86400000).toISOString(),
+      searchTokens: ['scholarship', 'alpha', 'academy']
+    });
+
+    const res = await request(app)
+      .get('/api/v1/opportunities')
+      .query({ type: 'SCHOLARSHIP', location: 'Berlin' });
+
     expect(res.status).to.equal(200);
     expect(res.body.data.opportunities).to.be.an('array');
+    expect(res.body.data.opportunities.length).to.be.at.least(1);
+    expect(res.body.data.opportunities[0].type).to.equal('SCHOLARSHIP');
+  });
+
+  it('should include isVerified status from publisher profile', async () => {
+    // Update publisher to be verified
+    await PublisherProfile.findOneAndUpdate({ userId: publisherId }, { verified: true });
+
+    // Create an opportunity
+    await Opportunity.create({
+      publisherId,
+      type: 'FELLOWSHIP',
+      title: { en: 'Verified Fellowship' },
+      organizationName: 'Verified Org',
+      description: { en: 'Desc' },
+      location: 'Remote',
+      status: 'ACTIVE',
+      deadline: new Date(Date.now() + 86400000).toISOString(),
+    });
+
+    const res = await request(app).get('/api/v1/opportunities').query({ search: 'Verified' });
+
+    expect(res.status).to.equal(200);
+    const verifiedOpp = res.body.data.opportunities.find(o => o.title.en === 'Verified Fellowship');
+    expect(verifiedOpp.isVerified).to.be.true;
+  });
+
+  it('should fail to update opportunity if not the owner', async () => {
+    const otherOpp = await Opportunity.create({
+      publisherId: new mongoose.Types.ObjectId(),
+      type: 'FELLOWSHIP',
+      title: { en: 'Other Fellowship' },
+      organizationName: 'Other Org',
+      description: { en: 'Other desc' },
+      location: 'London',
+      status: 'ACTIVE',
+      deadline: new Date(Date.now() + 86400000).toISOString(),
+    });
+
+    const res = await request(app)
+      .patch(`/api/v1/opportunities/${otherOpp._id}`)
+      .set('Authorization', `Bearer ${accessToken}`)
+      .send({ location: 'Paris' });
+
+    expect(res.status).to.equal(404); // or 403 depending on implementation
+  });
+
+  it('should get opportunity by ID', async () => {
+    const opp = await Opportunity.create({
+      publisherId,
+      type: 'EVENT',
+      title: { en: 'Tech Event' },
+      organizationName: 'Tech Org',
+      description: { en: 'Event desc' },
+      location: 'San Francisco',
+      status: 'ACTIVE',
+      deadline: new Date(Date.now() + 86400000).toISOString(),
+    });
+
+    const res = await request(app).get(`/api/v1/opportunities/${opp._id}`);
+    expect(res.status).to.equal(200);
+    expect(res.body.data.title.en).to.equal('Tech Event');
   });
 });
