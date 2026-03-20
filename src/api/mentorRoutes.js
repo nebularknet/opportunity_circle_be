@@ -3,6 +3,8 @@ import {
   createMentor,
   getMentors,
   linkMentorToWorkshop,
+  toggleMentorStatus,
+  updateMentorVerification,
 } from '../controllers/mentor.controller.js';
 import { verifyJWT, authorizeRoles } from '../middleware/auth.js';
 import validate from '../middleware/validate.js';
@@ -32,5 +34,9 @@ router.route('/').get(getMentors);
 // Secured routes
 router.route('/').post(verifyJWT, authorizeRoles('ADMIN', 'PUBLISHER'), validate(mentorSchema), createMentor);
 router.route('/link').post(verifyJWT, authorizeRoles('ADMIN', 'PUBLISHER'), validate(linkSchema), linkMentorToWorkshop);
+
+// Admin-only orchestration routes
+router.route('/:id/status').patch(verifyJWT, authorizeRoles('ADMIN'), toggleMentorStatus);
+router.route('/:id/verify').patch(verifyJWT, authorizeRoles('ADMIN'), updateMentorVerification);
 
 export default router;

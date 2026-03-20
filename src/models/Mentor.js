@@ -22,6 +22,14 @@ const mentorSchema = new Schema(
       type: String,
       trim: true,
     },
+    isActive: {
+      type: Boolean,
+      default: true,
+    },
+    isVerified: {
+      type: Boolean,
+      default: false,
+    },
   },
   {
     timestamps: true,
