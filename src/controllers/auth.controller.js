@@ -10,11 +10,20 @@ const cookieOptions = {
 };
 
 const registerUser = asyncHandler(async (req, res) => {
-  const user = await authService.registerUser(req.body);
+  const { user, accessToken, refreshToken } = await authService.registerUser(req.body);
+  const userPayload = typeof user?.toObject === 'function' ? user.toObject() : user;
 
   return res
     .status(201)
-    .json(new ApiResponse(201, user, 'User registered successfully'));
+    .cookie('accessToken', accessToken, cookieOptions)
+    .cookie('refreshToken', refreshToken, cookieOptions)
+    .json(
+      new ApiResponse(
+        201,
+        { ...userPayload, user, accessToken, refreshToken },
+        'User registered successfully'
+      )
+    );
 });
 
 const loginUser = asyncHandler(async (req, res) => {

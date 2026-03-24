@@ -68,13 +68,19 @@ const registerUser = async ({ email, password, role, fullName }) => {
     console.error('Failed to send verification email during registration:', error);
   }
 
+  const accessToken = generateAccessToken(user);
+  const refreshToken = generateRefreshToken(user);
+
+  user.refreshToken = refreshToken;
+  await user.save({ validateBeforeSave: false });
+
   const createdUser = await User.findById(user._id).select('-password -refreshToken');
 
   if (!createdUser) {
     throw new ApiError(500, 'Something went wrong while registering the user');
   }
 
-  return createdUser;
+  return { user: createdUser, accessToken, refreshToken };
 };
 
 const loginUser = async (email, password) => {
